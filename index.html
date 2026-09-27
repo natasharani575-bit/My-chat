@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="ur" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>چیٹ ماسٹر - جدید میسجنگ پلیٹ فارم</title>
+    <!-- Tailwind CSS & FontAwesome -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+</head>
+<body class="bg-gray-100 h-screen flex flex-col overflow-hidden transition-colors duration-300" id="body-main">
+
+    <!-- 1. لاگ ان اور رجسٹریشن اسکرین -->
+    <div id="auth-screen" class="fixed inset-0 bg-emerald-800 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md transform transition-all">
+            <div class="text-center mb-6">
+                <div class="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-3 shadow-inner">
+                    <i class="fa-solid fa-comments text-4xl"></i>
+                </div>
+                <h2 class="text-2xl font-extrabold text-gray-800">چیٹ ماسٹر</h2>
+                <p class="text-sm text-gray-500 mt-1">अपना मोबाइल नंबर और नाम दर्ज कर के अकाउंट बनाएं</p>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">नाम</label>
+                    <input type="text" id="auth-name" placeholder="آپ کا پورا نام" class="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">موبائل نمبر</label>
+                    <input type="text" id="auth-phone" placeholder="03001234567" class="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">پاس ورڈ یا پن</label>
+                    <input type="password" id="auth-pass" placeholder="پاس ورڈ" class="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                </div>
+                <button type="button" onclick="handleLogin()" class="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold hover:bg-emerald-700 shadow-lg transition duration-200 mt-2 cursor-pointer">لاگ ان / رجسٹر ہوں</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. مین ڈیش بورڈ / اسکرین -->
+    <div id="main-screen" class="flex-1 flex relative overflow-hidden hidden">
+        
+        <!-- سائیڈ مینو (تین لائنوں والا دراز مینو) -->
+        <div id="side-drawer" class="absolute inset-y-0 right-0 w-72 bg-white dark:bg-gray-900 shadow-2xl z-50 transform translate-x-full transition-transform duration-300 flex flex-col border-l dark:border-gray-800">
+            <div class="bg-emerald-700 text-white p-5 flex justify-between items-center">
+                <div class="flex items-center space-x-3 space-x-reverse">
+                    <div id="drawer-avatar" class="w-12 h-12 bg-white text-emerald-700 rounded-full flex items-center justify-center font-bold text-lg shadow">U</div>
+                    <div>
+                        <h4 id="drawer-username" class="font-bold text-sm">نام</h4>
+                        <span class="text-[10px] text-emerald-200">آن لائن</span>
+                    </div>
+                </div>
+                <button onclick="toggleSideMenu()" class="text-white text-xl font-bold hover:text-emerald-200">&times;</button>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto p-3 space-y-2 text-sm">
+                <button onclick="openProfileModal(); toggleSideMenu();" class="w-full flex items-center space-x-3 space-x-reverse p-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 transition">
+                    <i class="fa-solid fa-user-pen text-emerald-600 text-lg w-6"></i>
+                    <span class="font-medium">پروفائل سیٹنگز</span>
+                </button>
+                <button onclick="openStatusModal(); toggleSideMenu();" class="w-full flex items-center space-x-3 space-x-reverse p-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 transition">
+                    <i class="fa-solid fa-circle-notch text-emerald-600 text-lg w-6"></i>
+                    <span class="font-medium">اسٹیٹس اپڈیٹس</span>
+                </button>
+                <button onclick="openChannelModal(); toggleSideMenu();" class="w-full flex items-center space-x-3 space-x-reverse p-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 transition">
+                    <i class="fa-solid fa-bullhorn text-emerald-600 text-lg w-6"></i>
+                    <span class="font-medium">چینلز (براڈکাস্ট)</span>
+                </button>
+                <button onclick="toggleDarkMode(); toggleSideMenu();" class="w-full flex items-center space-x-3 space-x-reverse p-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 transition">
+                    <i class="fa-solid fa-moon text-emerald-600 text-lg w-6" id="drawer-dark-icon"></i>
+                    <span class="font-medium">ڈارک / لائٹ موڈ</span>
+                </button>
+                <button onclick="toggleAdminPanel(); toggleSideMenu();" class="w-full flex items-center space-x-3 space-x-reverse p-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 transition">
+                    <i class="fa-solid fa-shield-halved text-emerald-600 text-lg w-6"></i>
+                    <span class="font-medium">ایڈمن پینل</span>
+                </button>
+            </div>
+            
+            <div class="p-4 border-t dark:border-gray-800 text-center">
+                <button onclick="location.reload()" class="text-xs text-red-500 font-bold hover:underline"><i class="fa-solid fa-arrow-right-from-bracket ml-1"></i>لاگ آؤٹ کریں</button>
+            </div>
+        </div>
+
+        <!-- بائیں طرف کی چیٹ لسٹ اور ڈیش بورڈ -->
+        <div class="w-full md:w-1/3 bg-white border-l flex flex-col transition-colors duration-300" id="sidebar">
+            <div class="bg-emerald-600 text-white p-4 flex justify-between items-center shadow-md">
+                <div class="flex items-center space-x-3 space-x-reverse">
+                    <h3 class="font-extrabold text-lg tracking-wide">چیٹ ماسٹر</h3>
+                </div>
+                <div class="flex items-center space-x-3 space-x-reverse">
+                    <button onclick="openStatusModal()" title="اسٹیٹس" class="text-white hover:text-emerald-200 text-lg"><i class="fa-solid fa-circle-notch"></i></button>
+                    <button onclick="toggleSideMenu()" title="مینو" class="w-10 h-10 rounded-full hover:bg-emerald-700 flex items-center justify-center text-xl transition cursor-pointer">
+                        <i class="fa-solid fa-bars"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- سرچ بار -->
+            <div class="p-2 bg-gray-50 dark:bg-gray-900 border-b dark:border-gray-800">
+                <div class="relative">
+                    <span class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-gray-400">
+                        <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                    </span>
+                    <input type="text" id="search-user-input" onkeyup="searchUsers()" placeholder="موبائل نمبر یا نام سے تلاش کریں..." class="w-full pr-9 pl-4 py-2 bg-white dark:bg-gray-800 dark:text-white border dark:border-gray-700 rounded-xl text-xs focus:outline-none shadow-sm">
+                </div>
+            </div>
+            
+            <!-- نیویگیشن ٹیبز -->
+            <div class="flex bg-gray-50 border-b text-xs font-bold text-gray-600 dark:bg-gray-900 dark:border-gray-800 dark:text-gray-400">
+                <button onclick="switchTab('chats')" id="tab-chats" class="flex-1 py-3 border-b-2 border-emerald-600 text-emerald-600 text-center">چیٹس</button>
+                <button onclick="switchTab('calls')" id="tab-calls" class="flex-1 py-3 text-center">کالز</button>
+                <button onclick="switchTab('communities')" id="tab-communities" class="flex-1 py-3 text-center">کمیونٹیز</button>
+            </div>
+            
+            <!-- چیٹس لسٹ کنٹینر -->
+            <div id="chats-container" class="flex-1 overflow-y-auto divide-y dark:divide-gray-800"></div>
+
+            <!-- کالز کنٹینر -->
+            <div id="calls-container" class="flex-1 overflow-y-auto divide-y hidden dark:divide-gray-800">
+                <div class="p-3 flex items-center justify-between">
+                    <div class="flex items-center space-x-3 space-x-reverse">
+                        <div class="w-10 h-10 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full flex items-center justify-center"><i class="fa-solid fa-phone-arrow-up-right"></i></div>
+                        <div>
+                            <h4 class="font-semibold text-gray-800 dark:text-gray-200 text-sm">آڈیو / ویڈیو کال ہسٹری</h4>
+                            <p class="text-[11px] text-gray-500">حالیہ رابطے</p>
+                        </div>
+                    </div>
+                    <button onclick="triggerCall('audio')" class="text-emerald-600 hover:text-emerald-700"><i class="fa-solid fa-phone text-base"></i></button>
+                </div>
+            </div>
+
+            <!-- کمیونٹیز کنٹینر -->
+            <div id="communities-container" class="flex-1 overflow-y-auto p-4 space-y-3 hidden">
+                <div class="bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800 p-4 rounded-xl shadow-sm">
+                    <h4 class="font-bold text-emerald-800 dark:text-emerald-300"><i class="fa-solid fa-people-roof ml-2"></i>مرکزی کمیونٹی</h4>
+                    <p class="text-xs text-gray-600 dark:text-gray-300 mt-1">تمام متعلقہ گروپس، اعلانات اور سب گروپس کا مرکزی ہب۔</p>
+                    <button onclick="alert('کمیونٹی اعلانات اپ ٹو ڈیٹ ہیں!')" class="mt-3 bg-emerald-600 text-white text-xs px-3 py-1.5 rounded-lg shadow hover:bg-emerald-700 transition">اعلانات دیکھیں</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- دائیں طرف کی چیٹ ونڈو -->
+        <div class="flex-1 flex flex-col bg-gray-50 dark:bg-gray-900 hidden md:flex" id="chat-window">
+            <div class="bg-gray-100 dark:bg-gray-800 p-3 flex justify-between items-center border-b dark:border-gray-700">
+                <div class="flex items-center space-x-3 space-x-reverse">
+                    <div id="active-chat-avatar" class="w-10 h-10 bg-emerald-500 text-white rounded-full flex items-center justify-center font-bold shadow">U</div>
+                    <div>
+                        <h4 id="active-chat-name" class="font-bold text-gray-800 dark:text-white text-sm">کسی صارف کو منتخب کریں</h4>
+                        <span id="active-chat-status" class="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">آف لائن</span>
+                    </div>
+                </div>
+                <div class="flex space-x-4 space-x-reverse text-gray-600 dark:text-gray-300 text-lg">
+                    <button onclick="triggerCall('video')" title="ویڈیو کال"><i class="fa-solid fa-video"></i></button>
+                    <button onclick="triggerCall('audio')" title="آڈیو کال"><i class="fa-solid fa-phone"></i></button>
+                </div>
+            </div>
+            
+            <!-- میسجز کا ڈسپلے ایریا -->
+            <div id="messages-container" class="flex-1 p-4 overflow-y-auto space-y-3">
+                <div class="text-center text-gray-400 mt-20 text-sm">گفتگو شروع کرنے کے لیے سائیڈ لسٹ سے کسی صارف پر کلک کریں</div>
+            </div>
+            
+            <!-- ان پٹ بار -->
+            <div class="bg-gray-100 dark:bg-gray-800 p-3 flex items-center space-x-2 space-x-reverse border-t dark:border-gray-700">
+                <label class="text-gray-600 dark:text-gray-300 px-2 cursor-pointer hover:text-emerald-600 transition" title="فائل یا تصویر">
+                    <i class="fa-solid fa-paperclip text-xl"></i>
+                    <input type="file" id="media-input" class="hidden" accept="image/*,video/*,application/pdf" onchange="sendMediaMessage(event)">
+                </label>
+                <input type="text" id="message-input" placeholder="میسج یا چیٹ میں کچھ لکھیں..." class="flex-1 bg-white dark:bg-gray-700 dark:text-white px-4 py-2.5 rounded-xl focus:outline-none border dark:border-gray-600 text-sm shadow-inner" onkeypress="if(event.key === 'Enter') sendTextMessage()">
+                <button onclick="sendVoiceNote()" class="text-gray-600 dark:text-gray-300 px-2 hover:text-emerald-600 transition" title="وائس نوٹ"><i class="fa-solid fa-microphone text-xl"></i></button>
+                <button onclick="sendTextMessage()" class="bg-emerald-600 text-white px-4 py-2.5 rounded-xl hover:bg-emerald-700 shadow transition"><i class="fa-solid fa-paper-plane"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- پروفائل سیٹنگز ماڈل -->
+    <div id="profile-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 hidden p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-md">
+            <div class="flex justify-between items-center mb-4 border-b dark:border-gray-700 pb-2">
+                <h3 class="text-lg font-bold text-gray-800 dark:text-white">پروفائل سیٹنگز</h3>
+                <button onclick="openProfileModal()" class="text-gray-500 font-bold text-xl hover:text-red-500">&times;</button>
+            </div>
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">نیا نام</label>
+                    <input type="text" id="update-name" class="w-full p-2.5 border dark:border-gray-700 dark:bg-gray-700 dark:text-white rounded-xl text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">تعارف (About)</label>
+                    <input type="text" id="update-about" placeholder="مصروف یا دستیاب" class="w-full p-2.5 border dark:border-gray-700 dark:bg-gray-700 dark:text-white rounded-xl text-sm">
+                </div>
+                <button onclick="saveProfile()" class="w-full bg-emerald-600 text-white py-2.5 rounded-xl font-bold shadow hover:bg-emerald-700 text-sm">تبدیلیاں محفوظ کریں</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- اسٹیٹس ماڈل -->
+    <div id="status-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 hidden p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-md">
+            <div class="flex justify-between items-center mb-4 border-b dark:border-gray-700 pb-2">
+                <h3 class="text-lg font-bold text-gray-800 dark:text-white">اسٹیٹس اپڈیٹس (24 گھنٹے)</h3>
+                <button onclick="openStatusModal()" class="text-gray-500 font-bold text-xl hover:text-red-500">&times;</button>
+            </div>
+            <textarea id="status-text-input" rows="3" placeholder="अपना نیا اسٹیٹس لکھیں..." class="w-full p-3 border dark:border-gray-700 dark:bg-gray-700 dark:text-white rounded-xl mb-3 text-sm focus:outline-none"></textarea>
+            <button onclick="postStatus()" class="w-full bg-emerald-600 text-white py-2.5 rounded-xl font-bold shadow hover:bg-emerald-700 transition text-sm mb-3">اسٹیٹس اپ لوڈ کریں</button>
+            <div id="status-list-container" class="space-y-2 max-h-40 overflow-y-auto"></div>
+        </div>
+    </div>
+
+    <!-- چینلز ماڈل -->
+    <div id="channel-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 hidden p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-md">
+            <div class="flex justify-between items-center mb-4 border-b dark:border-gray-700 pb-2">
+                <h3 class="text-lg font-bold text-gray-800 dark:text-white">چینلز (براڈکাস্ট)</h3>
+                <button onclick="openChannelModal()" class="text-gray-500 font-bold text-xl hover:text-red-500">&times;</button>
+            </div>
+            <input type="text" id="channel-msg-input" placeholder="چینل کی تازہ ترین اپڈیٹ..." class="w-full p-3 border dark:border-gray-700 dark:bg-gray-700 dark:text-white rounded-xl mb-3 text-sm focus:outline-none">
+            <button onclick="postChannelUpdate()" class="w-full bg-emerald-600 text-white py-2.5 rounded-xl font-bold shadow hover:bg-emerald-700 transition text-sm mb-3">چینل پر پوسٹ کریں</button>
+            <div id="channel-posts-container" class="space-y-2 max-h-36 overflow-y-auto text-sm"></div>
+        </div>
+    </div>
+
+    <!-- ایڈمن پینل ماڈل -->
+    <div id="admin-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4 border-b dark:border-gray-700 pb-2">
+                <h3 class="text-lg font-bold text-gray-800 dark:text-white"><i class="fa-solid fa-shield-halved ml-2 text-emerald-600"></i>ایڈمن پینل (رجسترڈ صارفین کی مانیٹرنگ)</h3>
+                <button onclick="toggleAdminPanel()" class="text-gray-500 font-bold text-xl hover:text-red-500">&times;</button>
+            </div>
+            <div id="admin-users-list" class="divide-y dark:divide-gray-700 border dark:border-gray-700 rounded-xl p-2"></div>
+        </div>
+    </div>
+
+    <!-- فائر بیس اور ماسٹر لاجک -->
+    <script>
+        let db = null;
+        try {
+            const firebaseConfig = {
+                databaseURL: "https://family-chat-app-default-rtdb.firebaseio.com/"
+            };
+            if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+            }
+            db = firebase.database();
+        } catch (e) {
+            console.log("Database connection error fallback");
+        }
+
+        let currentUser = null;
+        let activeTargetUser = null;
+        let isDarkMode = false;
+
+        function handleLogin() {
+            try {
+                const nameInput = document.getElementById('auth-name');
+                const phoneInput = document.getElementById('auth-phone');
+                const passInput = document.getElementById('auth-pass');
+
+                if (!nameInput || !phoneInput || !passInput) return;
+
+                const name = nameInput.value.trim();
+                const phone = phoneInput.value.trim();
+                const pass = passInput.value.trim();
+
+                if(!name || !phone || !pass) {
+                    alert('براہ کرم نام، موبائل نمبر اور پاس ورڈ درج کریں!');
+                    return;
+                }
+
+                currentUser = { name, phone };
+                const cleanPhone = phone.replace(/[^0-9]/g, '');
+                
+                if (db) {
+                    try {
+                        db.ref('users/' + cleanPhone).set({
+                            name: name,
+                            phone: phone,
+                            status: 'online',
+                            about: 'دستیاب ہوں',
+                            lastLogin: new Date().toLocaleTimeString()
+                        });
+                    } catch (dbErr) {
+                        console.log("DB save skipped:", dbErr);
+                    }
+                }
+
+                const authScreen = document.getElementById('auth-screen');
+                const mainScreen = document.getElementById('main-screen');
+                const drawerName = document.getElementById('drawer-username');
+                const drawerAvatar = document.getElementById('drawer-avatar');
+
+                if (authScreen) authScreen.classList.add('hidden');
+                if (mainScreen) mainScreen.classList.remove('hidden');
+                if (drawerName) drawerName.innerText = name;
+                if (drawerAvatar) drawerAvatar.innerText = name.charAt(0).toUpperCase();
+
+                loadAllUsers();
+                loadStatuses();
+                loadChannels();
+                loadAdminUsers();
+            } catch (err) {
+                console.error("Login error:", err);
+                alert("لاگ ان کرنے میں خرابی پیش آئی، براہ کرم دوبارہ کوشش کریں۔");
+            }
+        }
+
+        function toggleSideMenu() {
+            const drawer = document.getElementById('side-drawer');
+            if (drawer) drawer.classList.toggle('translate-x-full');
+        }
+
+        function switchTab(tab) {
+            document.getElementById('tab-chats').className = 'flex-1 py-3 text-center text-gray-600 dark:text-gray-400';
+            document.getElementById('tab-calls').className = 'flex-1 py-3 text-center text-gray-600 dark:text-gray-400';
+            document.getElementById('tab-communities').className = 'flex-1 py-3 text-center text-gray-600 dark:text-gray-400';
+
+            document.getElementById('chats-container').classList.add('hidden');
+            document.getElementById('calls-container').classList.add('hidden');
+            document.getElementById('communities-container').classList.add('hidden');
+
+            if(tab === 'chats') {
+                document.getElementById('tab-chats').className = 'flex-1 py-3 border-b-2 border-emerald-600 text-emerald-600 font-bold text-center';
+                document.getElementById('chats-container').classList.remove('hidden');
+            } else if(tab === 'calls') {
+                document.getElementById('tab-calls').className = 'flex-1 py-3 border-b-2 border-emerald-600 text-emerald-600 font-bold text-center';
+                document.getElementById('calls-container').classList.remove('hidden');
+            } else if(tab === 'communities') {
+                document.getElementById('tab-communities').className = 'flex-1 py-3 border-b-2 border-emerald-600 text-emerald-600 font-bold text-center';
+                document.getElementById('communities-container').classList.remove('hidden');
+            }
+        }
+
+        function toggleDarkMode() {
+            isDarkMode = !isDarkMode;
+            const body = document.getElementById('body-main');
+            const icon = document.getElementById('drawer-dark-icon');
+            const sidebar = document.getElementById('sidebar');
+            const chatWindow = document.getElementById('chat-window');
+
+            if(isDarkMode) {
+                body.classList.add('dark');
+                sidebar.classList.add('bg-gray-900', 'text-white');
+                chatWindow.classList.add('bg-gray-900');
+                if (icon) icon.className = 'fa-solid fa-sun text-yellow-400 text-lg w-6';
+            } else {
+                body.classList.remove('dark');
+                sidebar.classList.remove('bg-gray-900', 'text-white');
+                chatWindow.classList.remove('bg-gray-900');
+                if (icon) icon.className = 'fa-solid fa-moon text-emerald-600 text-lg w-6';
+            }
+        }
+
+        function loadAllUsers() {
+            if (!db) return;
+            db.ref('users').on('value', (snapshot) => {
+                const users = snapshot.val();
+                const container = document.getElementById('chats-container');
+                if(!container) return;
+                container.innerHTML = '';
+                
+                if(users) {
+                    Object.keys(users).forEach(key => {
+                        const user = users[key];
+                        if(currentUser && user.phone === currentUser.phone) return;
+                        
+                        container.innerHTML += `
+                            <div onclick="startChat('${user.phone}', '${user.name}')" class="p-3 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer flex items-center space-x-3 space-x-reverse transition">
+                                <div class="w-12 h-12 bg-emerald-500 text-white rounded-full flex items-center justify-center font-bold text-lg shadow">${user.name.charAt(0).toUpperCase()}</div>
+                                <div class="flex-1">
+                                    <div class="flex justify-between">
+                                        <h4 class="font-bold text-gray-800 dark:text-gray-100 text-sm">${user.name}</h4>
+                                        <span class="text-[10px] text-emerald-600 bg-emerald-100 dark:bg-emerald-900 dark:text-emerald-200 px-2 py-0.5 rounded-full">${user.status}</span>
+                                    </div>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">نمبر: ${user.phone}</p>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+            });
+        }
+
+        function searchUsers() {
+            const query = document.getElementById('search-user-input').value.toLowerCase();
+            const items = document.querySelectorAll('#chats-container > div');
+            items.forEach(item => {
+                const text = item.innerText.toLowerCase();
+                item.style.display = text.includes(query) ? 'flex' : 'none';
+            });
+        }
+
+        function startChat(phone, name) {
+            activeTargetUser = { phone, name };
+            document.getElementById('active-chat-name').innerText = name;
+            document.getElementById('active-chat-avatar').innerText = name.charAt(0).toUpperCase();
+            document.getElementById('active-chat-status').innerText = 'آن لائن';
+            loadMessages();
+        }
+
+        function sendTextMessage() {
+            const input = document.getElementById('message-input');
+            const text = input.value.trim();
+            if(!text || !currentUser || !activeTargetUser) {
+                alert('پہلے کسی صارف کو چیٹ کے لیے منتخب کریں!');
+                return;
+            }
+
+            if (db) {
+                db.ref('private_messages').push({
+                    senderPhone: currentUser.phone.replace(/[^0-9]/g, ''),
+                    receiverPhone: activeTargetUser.phone.replace(/[^0-9]/g, ''),
+                    senderName: currentUser.name,
+                    type: 'text',
+                    text: text,
+                    time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                });
+            }
+            input.value = '';
+        }
+
+        function sendMediaMessage(event) {
+            const file = event.target.files[0];
+            if(!file || !activeTargetUser) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                if (db) {
+                    db.ref('private_messages').push({
+                        senderPhone: currentUser.phone.replace(/[^0-9]/g, ''),
+                        receiverPhone: activeTargetUser.phone.replace(/[^0-9]/g, ''),
+                        senderName: currentUser.name,
+                        type: file.type.startsWith('image') ? 'image' : 'file',
+                        fileName: file.name,
+                        fileData: e.target.result,
+                        time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                    });
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function sendVoiceNote() {
+            if(!activeTargetUser || !db) {
+                alert('پہلے چیٹ منتخب کریں!');
+                return;
+            }
+            db.ref('private_messages').push({
+                senderPhone: currentUser.phone.replace(/[^0-9]/g, ''),
+                receiverPhone: activeTargetUser.phone.replace(/[^0-9]/g, ''),
+                senderName: currentUser.name,
+                type: 'voice',
+                time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+            });
+        }
+
+        function deleteMessage(messageKey) {
+            if(confirm('کیا آپ اس پیغام کو ڈیلیٹ کرنا چاہتے ہیں؟') && db) {
+                db.ref('private_messages/' + messageKey).remove();
+            }
+        }
+
+        function loadMessages() {
+            const container = document.getElementById('messages-container');
+            if (!db || !activeTargetUser) return;
+
+            db.ref('private_messages').on('value', (snapshot) => {
+                container.innerHTML = '';
+                const msgs = snapshot.val();
+                if(msgs) {
+                    Object.keys(msgs).forEach(key => {
+                        const msg = msgs[key];
+                        const myPhone = currentUser.phone.replace(/[^0-9]/g, '');
+                        const targetPhone = activeTargetUser.phone.replace(/[^0-9]/g, '');
+
+                        if((msg.senderPhone === myPhone && msg.receiverPhone === targetPhone) || 
+                           (msg.senderPhone === targetPhone && msg.receiverPhone === myPhone)) {
+                            
+                            const isMe = msg.senderPhone === myPhone;
+                            let content = '';
+                            if(msg.type === 'image') {
+                                content = `<img src="${msg.fileData}" class="rounded-xl max-w-xs mb-1 shadow cursor-pointer" onclick="window.open('${msg.fileData}')">`;
+                            } else if(msg.type === 'file') {
+                                content = `<a href="${msg.fileData}" download="${msg.fileName}" class="flex items-center space-x-2 space-x-reverse text-blue-600 underline text-sm"><i class="fa-solid fa-file-arrow-down text-lg"></i><span>${msg.fileName}</span></a>`;
+                            } else if(msg.type === 'voice') {
+                                content = `<div class="flex items-center space-x-2 space-x-reverse text-gray-700 dark:text-gray-300 py-1"><i class="fa-solid fa-play text-emerald-600"></i><div class="w-32 h-2 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden"><div class="w-2/3 h-full bg-emerald-500"></div></div><span class="text-xs">0:15</span></div>`;
+                            } else {
+                                content = `<p class="text-sm text-gray-800 dark:text-gray-100">${msg.text}</p>`;
+                            }
+
+                            let deleteBtn = isMe ? `<button onclick="deleteMessage('${key}')" class="text-[10px] text-red-500 mr-2 hover:underline"><i class="fa-solid fa-trash"></i> ڈیلیٹ</button>` : '';
+
+                            container.innerHTML += `
+                                <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'}">
+                                    <div class="${isMe ? 'bg-emerald-100 dark:bg-emerald-900 border-emerald-200' : 'bg-white dark:bg-gray-800 border-gray-100'} p-3 rounded-2xl shadow-sm max-w-xs border dark:border-gray-700">
+                                        ${content}
+                                        <div class="flex justify-between items-center mt-1">
+                                            ${deleteBtn}
+                                            <span class="text-[10px] text-gray-400 flex items-center space-x-1 space-x-reverse">${msg.time} <i class="fa-solid fa-check-double text-emerald-600 text-[9px] mr-1"></i></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    });
+                    container.scrollTop = container.scrollHeight;
+                }
+            });
+        }
+
+        function triggerCall(type) {
+            alert(type === 'video' ? 'ویڈیو کال کا آغاز کیا جا رہا ہے...' : 'وائس کال ملائی جا رہی ہے...');
+        }
+
+        function postStatus() {
+            const text = document.getElementById('status-text-input').value.trim();
+            if(!text || !db) return;
+            db.ref('statuses').push({ name: currentUser.name, text: text, time: new Date().toLocaleTimeString() });
+            document.getElementById('status-text-input').value = '';
+            alert('اسٹیٹس کامیابی سے اپ ڈیٹ ہو گیا!');
+        }
+
+        function loadStatuses() {
+            if (!db) return;
+            db.ref('statuses').on('value', (snapshot) => {
+                const c = document.getElementById('status-list-container');
+                if(!c) return;
+                c.innerHTML = '';
+                const data = snapshot.val();
+                if(data) {
+                    Object.keys(data).forEach(k => {
+                        c.innerHTML += `<div class="p-2.5 border dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-700 text-xs"><b class="text-emerald-700 dark:text-emerald-400">${data[k].name}:</b> <span class="dark:text-gray-200">${data[k].text}</span> <span class="text-gray-400 float-left">${data[k].time}</span></div>`;
+                    });
+                }
+            });
+        }
+
+        function postChannelUpdate() {
+            const text = document.getElementById('channel-msg-input').value.trim();
+            if(!text || !db) return;
+            db.ref('channels').push({ text: text, time: new Date().toLocaleTimeString() });
+            document.getElementById('channel-msg-input').value = '';
+            alert('چینل پر پوسٹ کر دی گئی ہے!');
+        }
+
+        function loadChannels() {
+            if (!db) return;
+            db.ref('channels').on('value', (snapshot) => {
+                const c = document.getElementById('channel-posts-container');
+                if(!c) return;
+                c.innerHTML = '';
+                const data = snapshot.val();
+                if(data) {
+                    Object.keys(data).forEach(k => {
+                        c.innerHTML += `<div class="p-2.5 border dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-700 text-xs dark:text-gray-200">${data[k].text} <span class="text-gray-400 float-left">${data[k].time}</span></div>`;
+                    });
+                }
+            });
+        }
+
+        function loadAdminUsers() {
+            if (!db) return;
+            db.ref('users').on('value', (snapshot) => {
+                const users = snapshot.val();
+                const listContainer = document.getElementById('admin-users-list');
+                if(!listContainer) return;
+                listContainer.innerHTML = '';
+                if(users) {
+                    Object.keys(users).forEach(key => {
+                        const user = users[key];
+                        listContainer.innerHTML += `
+                            <div class="py-2.5 px-2 flex justify-between items-center text-sm">
+                                <div>
+                                    <p class="font-bold text-gray-800 dark:text-white">${user.name}</p>
+                                    <p class="text-xs text-gray-500">${user.phone}</p>
+                                </div>
+                                <span class="text-xs bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200 px-2.5 py-1 rounded-full">${user.lastLogin}</span>
+                            </div>
+                        `;
+                    });
+                }
+            });
+        }
+
+        function openProfileModal() { document.getElementById('profile-modal').classList.toggle('hidden'); }
+        function openStatusModal() { document.getElementById('status-modal').classList.toggle('hidden'); }
+        function openChannelModal() { document.getElementById('channel-modal').classList.toggle('hidden'); }
+        function toggleAdminPanel() { document.getElementById('admin-modal').classList.toggle('hidden'); }
+
+        function saveProfile() {
+            const newName = document.getElementById('update-name').value.trim();
+            if(newName) {
+                currentUser.name = newName;
+                document.getElementById('drawer-username').innerText = newName;
+                document.getElementById('drawer-avatar').innerText = newName.charAt(0).toUpperCase();
+            }
+            openProfileModal();
+            alert('پروفائل کامیابی سے اپ ڈیٹ ہو گئی!');
+        }
+    </script>
+</body>
+</html>
