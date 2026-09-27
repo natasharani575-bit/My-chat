@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="ur" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>پرائیویٹ میسجنگ ایپ - ماسٹر ایڈیشن</title>
+    <!-- Tailwind CSS & FontAwesome -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+</head>
+<body class="bg-gray-100 h-screen flex flex-col transition-colors duration-300" id="body-main">
+
+    <!-- 1. لاگ ان اسکرین -->
+    <div id="auth-screen" class="fixed inset-0 bg-emerald-800 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md transform transition-all">
+            <div class="text-center mb-6">
+                <div class="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-3 shadow-inner">
+                    <i class="fa-solid fa-comments text-4xl"></i>
+                </div>
+                <h2 class="text-2xl font-extrabold text-gray-800">خوش آمدید</h2>
+                <p class="text-sm text-gray-500 mt-1">اپنا اکاؤنٹ بنا کر چیٹ جوائن کریں</p>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">نام</label>
+                    <input type="text" id="auth-name" placeholder="آپ کا نام" class="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">موبائل نمبر</label>
+                    <input type="text" id="auth-phone" placeholder="03001234567" class="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">پاس ورڈ</label>
+                    <input type="password" id="auth-pass" placeholder="پن کوڈ یا پاس ورڈ" class="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                </div>
+                <button onclick="handleLogin()" class="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold hover:bg-emerald-700 shadow-lg transition duration-200 mt-2">لاگ ان / رجسٹر ہوں</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. مین چیٹ اسکرین -->
+    <div id="main-screen" class="flex-1 flex overflow-hidden hidden">
+        <!-- سائیڈ بار -->
+        <div class="w-full md:w-1/3 bg-white border-l flex flex-col transition-colors duration-300" id="sidebar">
+            <div class="bg-gray-100 p-4 flex justify-between items-center border-b dark:bg-gray-800 dark:border-gray-700" id="sidebar-header">
+                <div class="flex items-center space-x-3 space-x-reverse">
+                    <div id="user-avatar" class="w-10 h-10 bg-emerald-600 text-white rounded-full flex items-center justify-center font-bold shadow">U</div>
+                    <span id="current-username" class="font-bold text-gray-800 dark:text-white">نام</span>
+                </div>
+                <div class="flex space-x-3 space-x-reverse text-gray-600 dark:text-gray-300 text-lg">
+                    <button title="اسٹیٹس" onclick="openStatusModal()"><i class="fa-solid fa-circle-notch"></i></button>
+                    <button title="چینلز" onclick="openChannelModal()"><i class="fa-solid fa-bullhorn"></i></button>
+                    <button title="ڈارک موڈ" onclick="toggleDarkMode()"><i class="fa-solid fa-moon" id="dark-icon"></i></button>
+                    <button title="ایڈمن پینل" onclick="toggleAdminPanel()"><i class="fa-solid fa-shield-halved text-emerald-600"></i></button>
+                </div>
+            </div>
+            
+            <!-- نیویگیشن ٹیبز -->
+            <div class="flex bg-gray-50 border-b text-xs font-bold text-gray-600 dark:bg-gray-900 dark:border-gray-800 dark:text-gray-400">
+                <button onclick="switchTab('chats')" id="tab-chats" class="flex-1 py-3 border-b-2 border-emerald-600 text-emerald-600 text-center">چیٹس</button>
+                <button onclick="switchTab('calls')" id="tab-calls" class="flex-1 py-3 text-center">کالز</button>
+                <button onclick="switchTab('communities')" id="tab-communities" class="flex-1 py-3 text-center">کمیونٹیز</button>
+            </div>
+            
+            <!-- چیٹس کنٹینر -->
+            <div id="chats-container" class="flex-1 overflow-y-auto divide-y dark:divide-gray-800">
+                <div class="p-3 bg-emerald-50 dark:bg-emerald-950 cursor-pointer flex items-center space-x-3 space-x-reverse">
+                    <div class="w-12 h-12 bg-emerald-500 text-white rounded-full flex items-center justify-center font-bold text-lg shadow"><i class="fa-solid fa-users"></i></div>
+                    <div class="flex-1">
+                        <div class="flex justify-between"><h4 class="font-bold text-gray-800 dark:text-gray-100">فیملی گروپ</h4><span class="text-[10px] text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full">لائیو</span></div>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">تمام ممبران کے لیے مشترکہ چیٹ روم</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- کالز کنٹینر -->
+            <div id="calls-container" class="flex-1 overflow-y-auto divide-y hidden dark:divide-gray-800">
+                <div class="p-3 flex items-center justify-between">
+                    <div class="flex items-center space-x-3 space-x-reverse">
+                        <div class="w-10 h-10 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full flex items-center justify-center"><i class="fa-solid fa-phone-arrow-up-right"></i></div>
+                        <div>
+                            <h4 class="font-semibold text-gray-800 dark:text-gray-200 text-sm">گروپ وائس کال</h4>
+                            <p class="text-[11px] text-gray-500">آؤٹ گوئنگ - حال ہی میں</p>
+                        </div>
+                    </div>
+                    <button onclick="triggerCall('audio')" class="text-emerald-600 hover:text-emerald-700"><i class="fa-solid fa-phone text-base"></i></button>
+                </div>
+            </div>
+
+            <!-- کمیونٹیز کنٹینر -->
+            <div id="communities-container" class="flex-1 overflow-y-auto p-4 space-y-3 hidden">
+                <div class="bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800 p-4 rounded-xl shadow-sm">
+                    <h4 class="font-bold text-emerald-800 dark:text-emerald-300"><i class="fa-solid fa-people-roof ml-2"></i>خاندان کمیونٹی</h4>
+                    <p class="text-xs text-gray-600 dark:text-gray-300 mt-1">تمام سب گروپس، اعلانات اور فیملی ممبرز کا مرکزی ہب۔</p>
+                    <button onclick="alert('تمام اعلانات اپ ٹو ڈیٹ ہیں!')" class="mt-3 bg-emerald-600 text-white text-xs px-3 py-1.5 rounded-lg shadow hover:bg-emerald-700 transition">تفصیلات دیکھیں</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- چیٹ ونڈو -->
+        <div class="flex-1 flex flex-col bg-gray-50 dark:bg-gray-900" id="chat-window">
+            <div class="bg-gray-100 dark:bg-gray-800 p-3 flex justify-between items-center border-b dark:border-gray-700">
+                <div class="flex items-center space-x-3 space-x-reverse">
+                    <div class="w-10 h-10 bg-emerald-500 text-white rounded-full flex items-center justify-center font-bold shadow"><i class="fa-solid fa-users"></i></div>
+                    <div>
+                        <h4 id="active-chat-name" class="font-bold text-gray-800 dark:text-white text-sm">فیملی گروپ</h4>
+                        <span class="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">آن لائن (فائر بیس لائیو سِنک)</span>
+                    </div>
+                </div>
+                <div class="flex space-x-4 space-x-reverse text-gray-600 dark:text-gray-300 text-lg">
+                    <button onclick="triggerCall('video')" title="ویڈیو کال"><i class="fa-solid fa-video"></i></button>
+                    <button onclick="triggerCall('audio')" title="وائس کال"><i class="fa-solid fa-phone"></i></button>
+                </div>
+            </div>
+            
+            <!-- پیغامات کی جگہ -->
+            <div id="messages-container" class="flex-1 p-4 overflow-y-auto space-y-3"></div>
+            
+            <!-- ان پٹ بار -->
+            <div class="bg-gray-100 dark:bg-gray-800 p-3 flex items-center space-x-2 space-x-reverse border-t dark:border-gray-700">
+                <label class="text-gray-600 dark:text-gray-300 px-2 cursor-pointer hover:text-emerald-600 transition" title="فائل یا تصویر">
+                    <i class="fa-solid fa-paperclip text-xl"></i>
+                    <input type="file" id="media-input" class="hidden" accept="image/*,application/pdf" onchange="sendMediaMessage(event)">
+                </label>
+                <input type="text" id="message-input" placeholder="پیغام یہاں لکھیں..." class="flex-1 bg-white dark:bg-gray-700 dark:text-white px-4 py-2.5 rounded-xl focus:outline-none border dark:border-gray-600 text-sm shadow-inner" onkeypress="if(event.key === 'Enter') sendTextMessage()">
+                <button onclick="sendVoiceNote()" class="text-gray-600 dark:text-gray-300 px-2 hover:text-emerald-600 transition" title="وائس نوٹ"><i class="fa-solid fa-microphone text-xl"></i></button>
+                <button onclick="sendTextMessage()" class="bg-emerald-600 text-white px-4 py-2.5 rounded-xl hover:bg-emerald-700 shadow transition"><i class="fa-solid fa-paper-plane"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. ماڈلز -->
+    <div id="status-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 hidden p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-md">
+            <div class="flex justify-between items-center mb-4 border-b dark:border-gray-700 pb-2">
+                <h3 class="text-lg font-bold text-gray-800 dark:text-white">اسٹیٹس اپڈیٹس</h3>
+                <button onclick="openStatusModal()" class="text-gray-500 font-bold text-xl hover:text-red-500">&times;</button>
+            </div>
+            <textarea id="status-text-input" rows="3" placeholder="اپنا نیا اسٹیٹس لکھیں..." class="w-full p-3 border dark:border-gray-700 dark:bg-gray-700 dark:text-white rounded-xl mb-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"></textarea>
+            <button onclick="postStatus()" class="w-full bg-emerald-600 text-white py-2.5 rounded-xl font-bold shadow hover:bg-emerald-700 transition text-sm">اسٹیٹس لگائیں</button>
+            <div id="status-list-container" class="mt-4 space-y-2 max-h-36 overflow-y-auto"></div>
+        </div>
+    </div>
+
+    <div id="channel-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 hidden p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-md">
+            <div class="flex justify-between items-center mb-4 border-b dark:border-gray-700 pb-2">
+                <h3 class="text-lg font-bold text-gray-800 dark:text-white">چینلز (براڈکাস্ট)</h3>
+                <button onclick="openChannelModal()" class="text-gray-500 font-bold text-xl hover:text-red-500">&times;</button>
+            </div>
+            <input type="text" id="channel-msg-input" placeholder="چینل کی تازہ ترین اپڈیٹ..." class="w-full p-3 border dark:border-gray-700 dark:bg-gray-700 dark:text-white rounded-xl mb-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <button onclick="postChannelUpdate()" class="w-full bg-emerald-600 text-white py-2.5 rounded-xl font-bold shadow hover:bg-emerald-700 transition text-sm">چینل پر پوسٹ کریں</button>
+            <div id="channel-posts-container" class="mt-4 space-y-2 max-h-36 overflow-y-auto text-sm"></div>
+        </div>
+    </div>
+
+    <div id="admin-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4 border-b dark:border-gray-700 pb-2">
+                <h3 class="text-lg font-bold text-gray-800 dark:text-white"><i class="fa-solid fa-shield-halved ml-2 text-emerald-600"></i>ایڈمن پینل (لاگ ان ممبرز)</h3>
+                <button onclick="toggleAdminPanel()" class="text-gray-500 font-bold text-xl hover:text-red-500">&times;</button>
+            </div>
+            <div id="admin-users-list" class="divide-y dark:divide-gray-700 border dark:border-gray-700 rounded-xl p-2"></div>
+        </div>
+    </div>
+
+    <!-- فائر بیس اور ماسٹر لاجک -->
+    <script>
+        const firebaseConfig = {
+            databaseURL: "https://family-chat-app-default-rtdb.firebaseio.com/"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        let currentUser = null;
+        let isDarkMode = false;
+
+        function handleLogin() {
+            const name = document.getElementById('auth-name').value.trim();
+            const phone = document.getElementById('auth-phone').value.trim();
+            const pass = document.getElementById('auth-pass').value.trim();
+
+            if(!name || !phone || !pass) {
+                alert('براہ کرم نام، فون نمبر اور پاس ورڈ درج کریں!');
+                return;
+            }
+
+            currentUser = { name, phone };
+            const cleanPhone = phone.replace(/[^0-9]/g, '');
+            
+            db.ref('users/' + cleanPhone).set({
+                name: name,
+                phone: phone,
+                status: 'online',
+                lastLogin: new Date().toLocaleTimeString()
+            });
+
+            document.getElementById('auth-screen').classList.add('hidden');
+            document.getElementById('main-screen').classList.remove('hidden');
+            document.getElementById('current-username').innerText = name;
+            document.getElementById('user-avatar').innerText = name.charAt(0).toUpperCase();
+
+            loadUsersList();
+            loadMessages();
+            loadStatuses();
+            loadChannels();
+        }
+
+        function switchTab(tab) {
+            document.getElementById('tab-chats').className = 'flex-1 py-3 text-center text-gray-600 dark:text-gray-400';
+            document.getElementById('tab-calls').className = 'flex-1 py-3 text-center text-gray-600 dark:text-gray-400';
+            document.getElementById('tab-communities').className = 'flex-1 py-3 text-center text-gray-600 dark:text-gray-400';
+
+            document.getElementById('chats-container').classList.add('hidden');
+            document.getElementById('calls-container').classList.add('hidden');
+            document.getElementById('communities-container').classList.add('hidden');
+
+            if(tab === 'chats') {
+                document.getElementById('tab-chats').className = 'flex-1 py-3 border-b-2 border-emerald-600 text-emerald-600 font-bold text-center';
+                document.getElementById('chats-container').classList.remove('hidden');
+            } else if(tab === 'calls') {
+                document.getElementById('tab-calls').className = 'flex-1 py-3 border-b-2 border-emerald-600 text-emerald-600 font-bold text-center';
+                document.getElementById('calls-container').classList.remove('hidden');
+            } else if(tab === 'communities') {
+                document.getElementById('tab-communities').className = 'flex-1 py-3 border-b-2 border-emerald-600 text-emerald-600 font-bold text-center';
+                document.getElementById('communities-container').classList.remove('hidden');
+            }
+        }
+
+        function toggleDarkMode() {
+            isDarkMode = !isDarkMode;
+            const body = document.getElementById('body-main');
+            const icon = document.getElementById('dark-icon');
+            const sidebar = document.getElementById('sidebar');
+            const header = document.getElementById('sidebar-header');
+            const chatWindow = document.getElementById('chat-window');
+
+            if(isDarkMode) {
+                body.classList.add('dark');
+                sidebar.classList.add('bg-gray-900', 'text-white');
+                header.classList.add('bg-gray-800', 'border-gray-700');
+                chatWindow.classList.add('bg-gray-900');
+                icon.className = 'fa-solid fa-sun text-yellow-400';
+            } else {
+                body.classList.remove('dark');
+                sidebar.classList.remove('bg-gray-900', 'text-white');
+                header.classList.remove('bg-gray-800', 'border-gray-700');
+                chatWindow.classList.remove('bg-gray-900');
+                icon.className = 'fa-solid fa-moon';
+            }
+        }
+
+        function loadUsersList() {
+            db.ref('users').on('value', (snapshot) => {
+                const users = snapshot.val();
+                const listContainer = document.getElementById('admin-users-list');
+                listContainer.innerHTML = '';
+                if(users) {
+                    Object.keys(users).forEach(key => {
+                        const user = users[key];
+                        listContainer.innerHTML += `
+                            <div class="py-2.5 px-2 flex justify-between items-center text-sm">
+                                <div>
+                                    <p class="font-bold text-gray-800 dark:text-white">${user.name}</p>
+                                    <p class="text-xs text-gray-500">${user.phone}</p>
+                                </div>
+                                <span class="text-xs bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200 px-2.5 py-1 rounded-full">${user.lastLogin}</span>
+                            </div>
+                        `;
+                    });
+                }
+            });
+        }
+
+        function sendTextMessage() {
+            const input = document.getElementById('message-input');
+            const text = input.value.trim();
+            if(!text || !currentUser) return;
+
+            db.ref('messages').push({
+                senderName: currentUser.name,
+                senderPhone: currentUser.phone,
+                type: 'text',
+                text: text,
+                time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+            });
+            input.value = '';
+        }
+
+        function sendMediaMessage(event) {
+            const file = event.target.files[0];
+            if(!file || !currentUser) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                db.ref('messages').push({
+                    senderName: currentUser.name,
+                    senderPhone: currentUser.phone,
+                    type: file.type.startsWith('image') ? 'image' : 'file',
+                    fileName: file.name,
+                    fileData: e.target.result,
+                    time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                });
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function sendVoiceNote() {
+            if(!currentUser) return;
+            db.ref('messages').push({
+                senderName: currentUser.name,
+                senderPhone: currentUser.phone,
+                type: 'voice',
+                time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+            });
+        }
+
+        function deleteMessage(messageKey) {
+            if(confirm('کیا آپ اس پیغام کو ڈیلیٹ کرنا چاہتے ہیں؟')) {
+                db.ref('messages/' + messageKey).remove();
+            }
+        }
+
+        function loadMessages() {
+            const container = document.getElementById('messages-container');
+            db.ref('messages').on('value', (snapshot) => {
+                container.innerHTML = '';
+                const msgs = snapshot.val();
+                if(msgs) {
+                    Object.keys(msgs).forEach(key => {
+                        const msg = msgs[key];
+                        const isMe = currentUser && msg.senderPhone === currentUser.phone;
+                        
+                        let contentHtml = '';
+                        if(msg.type === 'image') {
+                            contentHtml = `<img src="${msg.fileData}" class="rounded-xl max-w-xs mb-1 cursor-pointer shadow" onclick="window.open('${msg.fileData}')">`;
+                        } else if(msg.type === 'file') {
+                            contentHtml = `<a href="${msg.fileData}" download="${msg.fileName}" class="flex items-center space-x-2 space-x-reverse text-blue-600 dark:text-blue-400 underline text-sm"><i class="fa-solid fa-file-arrow-down text-lg"></i><span>${msg.fileName}</span></a>`;
+                        } else if(msg.type === 'voice') {
+                            contentHtml = `<div class="flex items-center space-x-2 space-x-reverse text-gray-700 dark:text-gray-300 py-1"><i class="fa-solid fa-play text-emerald-600"></i><div class="w-32 h-2 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden"><div class="w-2/3 h-full bg-emerald-500"></div></div><span class="text-xs">0:15</span></div>`;
+                        } else {
+                            contentHtml = `<p class="text-sm text-gray-800 dark:text-gray-100">${msg.text}</p>`;
+                        }
+
+                        let deleteBtn = isMe ? `<button onclick="deleteMessage('${key}')" class="text-[10px] text-red-500 hover:text-red-700 mr-2"><i class="fa-solid fa-trash"></i> ڈیلیٹ</button>` : '';
+
+                        container.innerHTML += `
+                            <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'}">
+                                <span class="text-[11px] text-gray-500 dark:text-gray-400 mb-1 px-1">${msg.senderName}</span>
+                                <div class="${isMe ? 'bg-emerald-100 dark:bg-emerald-900 border-emerald-200' : 'bg-white dark:bg-gray-800 border-gray-100'} p-3 rounded-2xl shadow-sm max-w-xs border">
+                                    ${contentHtml}
+                                    <div class="flex justify-between items-center mt-1">
+                                        ${deleteBtn}
+                                        <span class="text-[10px] text-gray-400 block">${msg.time}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    container.scrollTop = container.scrollHeight;
+                }
+            });
+        }
+
+        function triggerCall(type) {
+            alert(type === 'video' ? 'ویڈیو کال کا آغاز کیا جا رہا ہے...' : 'وائس کال ملائی جا रही है...');
+        }
+
+        function postStatus() {
+            const text = document.getElementById('status-text-input').value.trim();
+            if(!text) return;
+            db.ref('statuses').push({ name: currentUser.name, text: text, time: new Date().toLocaleTimeString() });
+            document.getElementById('status-text-input').value = '';
+            alert('اسٹیٹس کامیابی سے اپ ڈیٹ ہو گیا!');
+        }
+
+        function loadStatuses() {
+            db.ref('statuses').on('value', (snapshot) => {
+                const c = document.getElementById('status-list-container');
+                c.innerHTML = '';
+                const data = snapshot.val();
+                if(data) {
+                    Object.keys(data).forEach(k => {
+                        c.innerHTML += `<div class="p-2.5 border dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-700 text-xs"><b class="text-emerald-700 dark:text-emerald-400">${data[k].name}:</b> <span class="dark:text-gray-200">${data[k].text}</span></div>`;
+                    });
+                }
+            });
+        }
+
+        function postChannelUpdate() {
+            const text = document.getElementById('channel-msg-input').value.trim();
+            if(!text) return;
+            db.ref('channels').push({ text: text, time: new Date().toLocaleTimeString()</i> });
+            document.getElementById('channel-msg-input').value = '';
+            alert('چینل پر پوسٹ کر دی گئی ہے!');
+        }
+
+        function loadChannels() {
+            db.ref('channels').on('value', (snapshot) => {
+                const c = document.getElementById('channel-posts-container');
+                c.innerHTML = '</i>';
+                const data = snapshot.val();
+                if(data) {
+                    Object.keys(data).forEach(k => {
+                        c.innerHTML += `<div class="p-2.5 border dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-700 text-xs dark:text-gray-200">${data[k].text} <span class="text-gray-400 float-left">${data[k].time}</span></div>`;
+                    });
+                }
+            });
+        }
+
+        function openStatusModal() { document.getElementById('status-modal').classList.toggle('hidden'); }
+        function openChannelModal() { document.getElementById('channel-modal').classList.toggle('hidden'); }
+        function toggleAdminPanel() { document.getElementById('admin-modal').classList.toggle('hidden'); }
+    </script>
+</body>
+</html>
